@@ -9,13 +9,7 @@ fn main() {
 
             let message_to_send = "Hello";
 
-            let message_to_serialized = serde_json::to_string(&message_to_send);
-            let message_to_serialized = message_to_serialized.unwrap();
-            let serialized_message_length_to_u32= (message_to_serialized.len()) as u32;
-
-            stream.write_all(&serialized_message_length_to_u32.to_be_bytes()).unwrap();
-
-            stream.write_all(&message_to_serialized.as_bytes()).unwrap();
+            send(&mut stream, &message_to_send);
 
             let mut array = [0; 4];
 
@@ -33,4 +27,14 @@ fn main() {
         Err(err) => panic!("Cannot connect: {err}")
     }
 
+}
+
+fn send(stream: &mut TcpStream, message_to_send: &str) {
+    let message_to_serialized = serde_json::to_string(&message_to_send);
+    let message_to_serialized = message_to_serialized.unwrap();
+    let serialized_message_length_to_u32 = (message_to_serialized.len()) as u32;
+
+    stream.write_all(&serialized_message_length_to_u32.to_be_bytes()).unwrap();
+
+    stream.write_all(&message_to_serialized.as_bytes()).unwrap();
 }
