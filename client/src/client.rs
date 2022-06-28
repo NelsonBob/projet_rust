@@ -15,18 +15,22 @@ fn main() {
 
             stream.read( &mut array).unwrap();
 
-            let size_message: u32 = u32::from_be_bytes(array);
-            let size_message= size_message as usize;
-
-            let mut vector = vec![0; size_message];
-
-            stream.read(&mut vector).unwrap();
-            let message_received = std::str::from_utf8(&*vector).unwrap().to_string();
-            println!("{}", message_received);
+            receive(&mut stream, array);
         }
         Err(err) => panic!("Cannot connect: {err}")
     }
 
+}
+
+fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
+    let size_message: u32 = u32::from_be_bytes(array);
+    let size_message = size_message as usize;
+
+    let mut vector = vec![0; size_message];
+
+    stream.read(&mut vector).unwrap();
+    let message_received = std::str::from_utf8(&*vector).unwrap().to_string();
+    println!("{}", message_received);
 }
 
 fn send(stream: &mut TcpStream, message_to_send: &str) {
