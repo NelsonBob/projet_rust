@@ -2,6 +2,9 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str;
 use serde::{Serialize, Deserialize};
+use crate::utils::parse;
+
+mod utils;
 
 fn main() {
     let stream = std::net::TcpStream::connect("127.0.0.1:7878");
@@ -33,12 +36,9 @@ fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
 
     let welcome_serialized = serde_json::to_string(&message_received).unwrap();
 
-    let a = welcome_serialized.replace("\\", "");
+    let response: String = parse(welcome_serialized);
 
-
-    let first_last_off: &str = &a[1..a.len() - 1];
-
-    let message: Result<Message, _> = serde_json::from_str(&first_last_off);
+    let message: Result<Message, _> = serde_json::from_str(&response);
 
     match message {
         Ok(m) => println!("message={m:?}"),
