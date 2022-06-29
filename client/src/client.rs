@@ -32,16 +32,13 @@ fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
     let message_received = std::str::from_utf8(&*vector).unwrap();
 
     let welcome_serialized = serde_json::to_string(&message_received).unwrap();
-    println!("Servor Response Serialized: {}", welcome_serialized);
 
-    let m = Message::Welcome(Welcome { version: 1 });
-    let x = serde_json::to_string(&m).unwrap();
-
-    let welcome_serialized_1 = serde_json::to_string(&x).unwrap();;
-    println!("Test Serialized: {}", x);
+    let a = welcome_serialized.replace("\\", "");
 
 
-    let message: Result<Message, _> = serde_json::from_str(&welcome_serialized_1);
+    let first_last_off: &str = &a[1..a.len() - 1];
+
+    let message: Result<Message, _> = serde_json::from_str(&first_last_off);
 
     match message {
         Ok(m) => println!("message={m:?}"),
