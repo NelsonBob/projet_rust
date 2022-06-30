@@ -1,5 +1,3 @@
-pub fn f() {}
-
 pub fn parse(string_to_parse: String) -> String {
     let string_without_slash = string_to_parse.replace("\\", "");
 
