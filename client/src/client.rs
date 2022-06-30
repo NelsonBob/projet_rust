@@ -19,6 +19,28 @@ fn main() {
 
             let array_2 = [0; 4];
             receive(&mut stream, array_2);
+
+            let mut v: Vec<PublicPlayer> = Vec::new();
+            let mut array_3 = [0; 4];
+            stream.read(&mut array_3).unwrap();
+
+            let size_message: u32 = u32::from_be_bytes(array);
+            let size_message = size_message as usize;
+            let vector = vec![0; size_message];
+
+            println!("{}",size_message);
+            /*
+            stream.read(&mut vector).unwrap();
+
+            let message_received = std::str::from_utf8(&*vector).unwrap();
+            let welcome_serialized = serde_json::to_string(&message_received).unwrap();
+            let a = welcome_serialized.replace("\\", "");
+
+
+            let first_last_off: &str = &a[1..a.len() - 1];
+            let message: Result<Message, _> = serde_json::from_str(&first_last_off);
+
+             */
         }
         Err(err) => panic!("Cannot connect: {err}")
     }
@@ -29,20 +51,16 @@ fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
 
     let size_message: u32 = u32::from_be_bytes(array);
     let size_message = size_message as usize;
-
     let mut vector = vec![0; size_message];
 
     stream.read(&mut vector).unwrap();
 
     let message_received = std::str::from_utf8(&*vector).unwrap();
-
     let welcome_serialized = serde_json::to_string(&message_received).unwrap();
-
     let a = welcome_serialized.replace("\\", "");
 
 
     let first_last_off: &str = &a[1..a.len() - 1];
-
     let message: Result<Message, _> = serde_json::from_str(&first_last_off);
 
     match message {
@@ -55,7 +73,9 @@ fn send(stream: &mut TcpStream, message_to_send: Message) {
     let message_to_serialized = serde_json::to_string(&message_to_send);
     let message_to_serialized = message_to_serialized.unwrap();
     let serialized_message_length_to_u32 = (message_to_serialized.len()) as u32;
+
     stream.write_all(&serialized_message_length_to_u32.to_be_bytes()).unwrap();
+
     stream.write_all(&message_to_serialized.as_bytes()).unwrap();
 }
 
@@ -87,4 +107,13 @@ enum Message {
     Welcome(Welcome),
     Subscribe(Subscribe),
     SubscribeResult(SubscribeResult)
+}
+#[derive(Debug, Serialize, Deserialize)]
+struct PublicPlayer {
+    name: String,
+    stream_id: String,
+    score: i32,
+    steps: u32,
+    is_active: bool,
+    total_used_time: f64
 }
