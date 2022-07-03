@@ -2,25 +2,38 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::{io, str};
 use serde::{Serialize, Deserialize};
+use hashcash::{Stamp, check};
+
 
 fn main() {
     let stream = std::net::TcpStream::connect("127.0.0.1:7878");
     match stream {
-        Ok(mut stream ) => {
+        Ok(mut stream) => {
             let hello = Message::Hello;
             send(&mut stream, hello);
 
-            let subscribe = Message::Subscribe(Subscribe { name: "AAA".parse().unwrap() });
+            let subscribe = Message::Subscribe(Subscribe { name: "kAk".parse().unwrap() });
             send(&mut stream, subscribe);
 
+            // welcome
             let array = [0; 4];
             receive(&mut stream, array);
 
+            // subscribeResult
             let array_2 = [0; 4];
             receive(&mut stream, array_2);
 
+            // leaderBoard
             let array_3 = [0; 4];
             receive(&mut stream, array_3);
+
+            //RoundSummary if one player
+            let array_4 = [0; 4];
+            receive(&mut stream, array_4);
+
+            //End of game
+            let array_5 = [0; 4];
+            receive(&mut stream, array_5);
         }
         Err(err) => panic!("Cannot connect: {err}")
     }
@@ -33,12 +46,9 @@ fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
     let size_message = size_message as usize;
     let mut vector = vec![0; size_message];
 
-    println!("{}",size_message);
-
     stream.read(&mut vector).unwrap();
 
     let message_received = std::str::from_utf8(&*vector).unwrap();
-    println!("received: {}", message_received);
 
     let welcome_serialized = serde_json::to_string(&message_received).unwrap();
     let a = welcome_serialized.replace("\\", "");
@@ -91,7 +101,10 @@ enum Message {
     Welcome(Welcome),
     Subscribe(Subscribe),
     SubscribeResult(SubscribeResult),
-    PublicLeaderBoard(PublicLeaderBoard)
+    PublicLeaderBoard(PublicLeaderBoard),
+    Challenge(Challenge),
+    RoundSummary(RoundSummary),
+    EndOfGame(EndOfGame)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -109,7 +122,7 @@ struct PublicPlayer {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Challenge {
-    ChallengeName(ChallengeInput)
+    ChallengeName(ChallengeInput),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -117,4 +130,67 @@ struct ChallengeInput {
 
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct ChallengeOutput {
 
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum ChallengeAnswer {
+    ChallengeName(ChallengeOutput)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ChallengeResult {
+    answer: ChallengeAnswer,
+    next_target: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum ChallengeValue {
+    Unreachable,
+    Timeout,
+    BadResult(BadResult),
+    OK(Ok)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct BadResult {
+    used_time: f64,
+    next_target: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Ok {
+    used_time: f64,
+    next_target: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MD5HashCashInput {
+    complexity: u32,
+    message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MD5HashCashOutput {
+    seed: u64,
+    hashcode: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RoundSummary {
+    challenge: String,
+    chain: Vec<ReportedChallengeResult>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ReportedChallengeResult {
+    name: String,
+    value: ChallengeValue
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct EndOfGame {
+    leader_board: PublicLeaderBoard
+}
