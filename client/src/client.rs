@@ -1,17 +1,16 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::str;
+use std::{io, str};
 use serde::{Serialize, Deserialize};
 
 fn main() {
     let stream = std::net::TcpStream::connect("127.0.0.1:7878");
     match stream {
         Ok(mut stream ) => {
-
             let hello = Message::Hello;
             send(&mut stream, hello);
 
-            let subscribe = Message::Subscribe(Subscribe { name: "Kevin".parse().unwrap() });
+            let subscribe = Message::Subscribe(Subscribe { name: "AAA".parse().unwrap() });
             send(&mut stream, subscribe);
 
             let array = [0; 4];
@@ -20,27 +19,8 @@ fn main() {
             let array_2 = [0; 4];
             receive(&mut stream, array_2);
 
-            let mut v: Vec<PublicPlayer> = Vec::new();
-            let mut array_3 = [0; 4];
-            stream.read(&mut array_3).unwrap();
-
-            let size_message: u32 = u32::from_be_bytes(array);
-            let size_message = size_message as usize;
-            let vector = vec![0; size_message];
-
-            println!("{}",size_message);
-            /*
-            stream.read(&mut vector).unwrap();
-
-            let message_received = std::str::from_utf8(&*vector).unwrap();
-            let welcome_serialized = serde_json::to_string(&message_received).unwrap();
-            let a = welcome_serialized.replace("\\", "");
-
-
-            let first_last_off: &str = &a[1..a.len() - 1];
-            let message: Result<Message, _> = serde_json::from_str(&first_last_off);
-
-             */
+            let array_3 = [0; 4];
+            receive(&mut stream, array_3);
         }
         Err(err) => panic!("Cannot connect: {err}")
     }
@@ -53,9 +33,13 @@ fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
     let size_message = size_message as usize;
     let mut vector = vec![0; size_message];
 
+    println!("{}",size_message);
+
     stream.read(&mut vector).unwrap();
 
     let message_received = std::str::from_utf8(&*vector).unwrap();
+    println!("received: {}", message_received);
+
     let welcome_serialized = serde_json::to_string(&message_received).unwrap();
     let a = welcome_serialized.replace("\\", "");
 
@@ -106,8 +90,13 @@ enum Message {
     Hello,
     Welcome(Welcome),
     Subscribe(Subscribe),
-    SubscribeResult(SubscribeResult)
+    SubscribeResult(SubscribeResult),
+    PublicLeaderBoard(PublicLeaderBoard)
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+struct PublicLeaderBoard(Vec<PublicPlayer>);
+
 #[derive(Debug, Serialize, Deserialize)]
 struct PublicPlayer {
     name: String,
@@ -117,3 +106,15 @@ struct PublicPlayer {
     is_active: bool,
     total_used_time: f64
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+enum Challenge {
+    ChallengeName(ChallengeInput)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ChallengeInput {
+
+}
+
+
