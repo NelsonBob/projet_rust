@@ -132,8 +132,8 @@ pub struct MD5HashCashInput {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MD5HashCashOutput {
-    seed: u64,
-    hashcode: String,
+    pub seed: u64,
+    pub hashcode: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

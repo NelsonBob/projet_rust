@@ -1,14 +1,13 @@
+use std::{io, str};
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::{io, str};
 use serde::{Serialize, Deserialize};
 use hashcash::{Stamp, check};
-use shared::{Message, receive, send , Hello, Welcome, Subscribe, SubscribeResult, PublicLeaderBoard,
-Challenge, ChallengeResult, ChallengeAnswer, RoundSummary, EndOfGame, SubscribeError, MD5HashCash};
+use shared::{Message, receive, send, Hello, Welcome, Subscribe, SubscribeResult, PublicLeaderBoard, Challenge, ChallengeResult, ChallengeAnswer, RoundSummary, EndOfGame, SubscribeError, MD5HashCash, MD5HashCashOutput};
 
 
 fn main() {
-    let stream = std::net::TcpStream::connect("127.0.0.1:7878");
+    let stream = TcpStream::connect("127.0.0.1:7878");
     match stream {
         Ok(mut stream) => {
             let hello = Message::Hello;
@@ -41,7 +40,7 @@ fn main() {
             // leaderBoard
             receive(&mut stream, array);
         }
-        Err(err) => panic!("Cannot connect: {err}")
+        Err(err) => panic!("Cannot connect: {}",err)
     }
 }
 
