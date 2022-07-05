@@ -12,28 +12,32 @@ fn main() {
             let hello = Message::Hello;
             send(&mut stream, hello);
 
-            let subscribe = Message::Subscribe(Subscribe { name: "kAk".parse().unwrap() });
+            let subscribe = Message::Subscribe(Subscribe { name: "lk".parse().unwrap() });
             send(&mut stream, subscribe);
 
-            // welcome
             let array = [0; 4];
+
+            // welcome
             receive(&mut stream, array);
 
-            // subscribeResult
-            let array_2 = [0; 4];
-            receive(&mut stream, array_2);
+            // subscribe result
+            receive(&mut stream, array);
 
             // leaderBoard
-            let array_3 = [0; 4];
-            receive(&mut stream, array_3);
+            receive(&mut stream, array);
 
-            //RoundSummary if one player
-            let array_4 = [0; 4];
-            receive(&mut stream, array_4);
+            // challenge
+            let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(MD5HashCashOutput { seed: 0, hashcode: "".to_string() }),  next_target: "".to_string() });
+            send(&mut stream, challenge_result);
 
-            //End of game
-            let array_5 = [0; 4];
-            receive(&mut stream, array_5);
+            // challenge result
+            receive(&mut stream, array);
+
+            // Round Summary
+            receive(&mut stream, array);
+
+            // leaderBoard
+            receive(&mut stream, array);
         }
         Err(err) => panic!("Cannot connect: {err}")
     }
@@ -44,6 +48,9 @@ fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
 
     let size_message: u32 = u32::from_be_bytes(array);
     let size_message = size_message as usize;
+
+    println!("{}", size_message);
+
     let mut vector = vec![0; size_message];
 
     stream.read(&mut vector).unwrap();
@@ -70,7 +77,7 @@ fn send(stream: &mut TcpStream, message_to_send: Message) {
 
     stream.write_all(&serialized_message_length_to_u32.to_be_bytes()).unwrap();
 
-    stream.write_all(&message_to_serialized.as_bytes()).unwrap();
+    stream.write_all(&message_to_serialized.as_bytes()).expect("Broken Pipe");
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -103,6 +110,8 @@ enum Message {
     SubscribeResult(SubscribeResult),
     PublicLeaderBoard(PublicLeaderBoard),
     Challenge(Challenge),
+    ChallengeResult(ChallengeResult),
+    ChallengeAnswer(ChallengeAnswer),
     RoundSummary(RoundSummary),
     EndOfGame(EndOfGame)
 }
@@ -122,22 +131,12 @@ struct PublicPlayer {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Challenge {
-    ChallengeName(ChallengeInput),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ChallengeInput {
-
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ChallengeOutput {
-
+    MD5HashCash(MD5HashCashInput),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 enum ChallengeAnswer {
-    ChallengeName(ChallengeOutput)
+    MD5HashCash(MD5HashCashOutput)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
