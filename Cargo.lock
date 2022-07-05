@@ -291,6 +291,12 @@ dependencies = [
 [[package]]
 name = "shared"
 version = "0.1.0"
+dependencies = [
+ "md5",
+ "rust-hashcash",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "simpl"
