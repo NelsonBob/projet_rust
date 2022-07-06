@@ -3,6 +3,7 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use serde::{Serialize, Deserialize};
 use hashcash::{Stamp, check};
+use serde_json::Error;
 use shared::{Message, receive, send, Welcome, Subscribe, SubscribeResult, PublicLeaderBoard, Challenge, ChallengeResult, ChallengeAnswer, RoundSummary, EndOfGame, SubscribeError, MD5HashCashOutput, md5hash_cash};
 use shared::Message::Hello;
 
@@ -13,35 +14,43 @@ fn main() {
             let hello = Message::Hello;
             send(&mut stream, hello);
 
-            let subscribe = Message::Subscribe(Subscribe { name: "lk".parse().unwrap() });
-            send(&mut stream, subscribe);
-
             let array = [0; 4];
 
-            // welcome
-            receive(&mut stream, array);
+            loop {
+                let challenge = receive(&mut stream, array);
 
-            // subscribe result
-            receive(&mut stream, array);
+                match challenge {
+                    Ok(v) => unsafe {
+                        if let Message::Welcome(..) = v {
+                            let subscribe = Message::Subscribe(Subscribe { name: "kk".parse().unwrap() });
+                            send(&mut stream, subscribe);
+                        }
+                        if let Message::EndOfGame(..) = v {
+                            break;
+                        }
+                        if let Message::Challenge(challenge) = v {
+                            println!("tt: {:?}",challenge);
+                            loop {
+                                match challenge {
+                                    Challenge::MD5HashCash(hashcash) => {
+                                        let complexity = hashcash.complexity;
+                                        let message = hashcash.message;
 
-            // leaderBoard
-            receive(&mut stream, array);
+                                        let md5answer = md5hash_cash(complexity, message);
 
-            // challenge
-            receive(&mut stream, array);
+                                        println!("ll {:?}",md5answer);
 
-            // challenge
-            let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(MD5HashCashOutput { seed: 0, hashcode: "".to_string() }),  next_target: "".to_string() });
-            send(&mut stream, challenge_result);
+                                        let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(md5answer),  next_target: "kk".parse().unwrap() });
+                                        send(&mut stream, challenge_result);
 
-            // challenge result
-            receive(&mut stream, array);
-
-            // Round Summary
-            receive(&mut stream, array);
-
-            // leaderBoard
-            receive(&mut stream, array);
+                                        break;
+                                    } }
+                            }
+                        }
+                    }
+                    _ => { println!("{:?}", challenge); break;}
+                }
+            }
         }
         Err(err) => panic!("Cannot connect: {}",err)
     }
