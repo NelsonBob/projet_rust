@@ -3,15 +3,15 @@ use std::net::TcpStream;
 use std::{io, str};
 use serde::{Serialize, Deserialize};
 use hashcash::{Stamp, check};
+use md5::Digest;
+use serde_json::Error;
 
 
-pub fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
+pub fn receive(stream: &mut TcpStream, mut array: [u8; 4]) -> Result<Message, Error> {
     stream.read( &mut array).unwrap();
 
     let size_message: u32 = u32::from_be_bytes(array);
     let size_message = size_message as usize;
-
-    println!("{}", size_message);
 
     let mut vector = vec![0; size_message];
 
@@ -26,10 +26,14 @@ pub fn receive(stream: &mut TcpStream, mut array: [u8; 4]) {
     let first_last_off: &str = &a[1..a.len() - 1];
     let message: Result<Message, _> = serde_json::from_str(&first_last_off);
 
-    match message {
-        Ok(m) => println!("message={m:?}"),
-        Err(err) => println!("error={err:?}")
-    }
+    match  { }
+    return process_result(message)
+}
+
+fn process_result(message: Result<Message, Error>) -> Message {
+    let msg = message.unwrap();
+
+    Message::Challenge(Challenge::MD5HashCash(MD5HashCashInput { complexity: 0, message: "".to_string() }))
 }
 
 pub fn send(stream: &mut TcpStream, message_to_send: Message) {
@@ -40,6 +44,77 @@ pub fn send(stream: &mut TcpStream, message_to_send: Message) {
     stream.write_all(&serialized_message_length_to_u32.to_be_bytes()).unwrap();
 
     stream.write_all(&message_to_serialized.as_bytes()).expect("Broken Pipe");
+}
+
+pub fn md5hash_cash(complexity: u32, message: &str) -> (String, String) {
+    let mut finish = false;
+    let mut seed = 0;
+    let mut hash_code: String = "".to_string();
+
+    while finish == false {
+        let hex_seed = format_dec_to_hex(seed);
+        let concat_seed = concat_string(hex_seed.to_string(), message.to_string());
+        let digest = md5::compute(concat_seed);
+        hash_code = format_digest_to_hex(digest);
+        let mut binary_hash: String = format_to_binary(&hash_code);
+        finish = check_seed(binary_hash, complexity);
+        seed += 1;
+    }
+     return (seed.to_string(), hash_code);
+}
+
+fn concat_string(seed: String, message: String) -> String {
+    format!("{}{}\n", seed, message)
+}
+
+fn format_dec_to_hex(seed: i32) -> String {
+    format!("{:016X}", seed)
+}
+
+fn format_digest_to_hex(digest: Digest) -> String {
+    format!("{:032X}", digest)
+}
+
+fn format_to_binary(hashcode: &String) -> String {
+    hashcode.chars().map(to_binary).collect()
+}
+
+fn check_seed(binary_hash: String, complexity: u32) -> bool {
+    let mut index = 0;
+    for character in binary_hash.chars() {
+        if character == '1' && index < complexity {
+            print!("false\n");
+            return false;
+        } else if index >= complexity {
+            print!("good ");//envoie du resultat au server
+            return true;
+        }
+        index += 1;
+    }
+    return false;
+}
+
+fn to_binary(c: char) -> String {
+    let b = match c {
+        '0' => "0000",
+        '1' => "0001",
+        '2' => "0010",
+        '3' => "0011",
+        '4' => "0100",
+        '5' => "0101",
+        '6' => "0110",
+        '7' => "0111",
+        '8' => "1000",
+        '9' => "1001",
+        'A' => "1010",
+        'B' => "1011",
+        'C' => "1100",
+        'D' => "1101",
+        'E' => "1110",
+        'F' => "1111",
+        _ => "",
+    };
+    return String::from(b);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
