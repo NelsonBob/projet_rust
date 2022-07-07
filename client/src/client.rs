@@ -20,16 +20,19 @@ fn main() {
                 let challenge = receive(&mut stream, array);
 
                 match challenge {
-                    Ok(v) => unsafe {
+                    Ok(v) => {
                         if let Message::Welcome(..) = v {
-                            let subscribe = Message::Subscribe(Subscribe { name: "kk".parse().unwrap() });
+                            let subscribe = Message::Subscribe(Subscribe { name: "eaa".parse().unwrap() });
                             send(&mut stream, subscribe);
+                        }
+                        if let Message::PublicLeaderBoard(..) = v {
+                            println!("public")
                         }
                         if let Message::EndOfGame(..) = v {
                             break;
                         }
                         if let Message::Challenge(challenge) = v {
-                            println!("tt: {:?}",challenge);
+                            println!("tt: {:?}", challenge);
                             loop {
                                 match challenge {
                                     Challenge::MD5HashCash(hashcash) => {
@@ -38,21 +41,25 @@ fn main() {
 
                                         let md5answer = md5hash_cash(complexity, message);
 
-                                        println!("ll {:?}",md5answer);
+                                        println!("ll {:?}", md5answer);
 
-                                        let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(md5answer),  next_target: "kk".parse().unwrap() });
+                                        let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(md5answer), next_target: "jk".parse().unwrap() });
                                         send(&mut stream, challenge_result);
 
                                         break;
-                                    } }
+                                    }
+                                }
                             }
                         }
                     }
-                    _ => { println!("{:?}", challenge); break;}
+                    _ => {
+                        println!("{:?}", challenge);
+                        break;
+                    }
                 }
             }
         }
-        Err(err) => panic!("Cannot connect: {}",err)
+        Err(err) => panic!("Cannot connect: {}", err)
     }
 }
 

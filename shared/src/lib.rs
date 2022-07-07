@@ -43,51 +43,76 @@ pub fn send(stream: &mut TcpStream, message_to_send: Message) {
 
 pub fn md5hash_cash(complexity: u32, message: String) -> MD5HashCashOutput {
 
-    let mut algorithm_is_good = false;
-    let mut seed_output: u64 = 0;
-    let mut hash_code: String = "".to_string();
+    let mut finish = false;
+    let mut seed: u64 = 0;
+    let mut hash_code = "".to_string();
 
-    while(!algorithm_is_good) {
-        let seed: u64 = rand::thread_rng().gen_range(0..10000000000000000);
-
-        let concatenation_seed_and_message: String = seed.to_string() + &*message;
-
-        let digest: Digest = md5::compute(concatenation_seed_and_message);
-
-        let hex_hashcode = format_digest_to_hex(digest);
-        let bin_hashcode = format_hex_to_binary(hex_hashcode);
-
-        let size_message = complexity as usize;
-
-        let mut slice = &bin_hashcode[0..size_message];
-
-        for c in slice.chars() {
-            if c != '0' {
-                break;
-            }
-            slice = &slice[1..size_message];
-        }
-
-        if(slice.len() == 0){
-            algorithm_is_good = true;
-            seed_output = seed;
-            hash_code = hex_hashcode;
-        }
+    while finish == false {
+        let hex_seed = format_dec_to_hex(seed as i32);
+        let concat_seed = concat_string(hex_seed.to_string(), &message);
+        let digest = md5::compute(concat_seed);
+        hash_code = format_digest_to_hex(digest);
+        let mut binary_hash: String = format_to_binary(&hash_code);
+        finish = check_seed(binary_hash, complexity);
+        seed += 1;
     }
 
+     return MD5HashCashOutput{ seed, hashcode: hash_code.parse().unwrap() };
+}
 
+fn concat_string(seed: String, message: &String) -> String {
+    format!("{}{}\n", seed, message)
+}
 
-    println!("{:?}", slice);
-
-     return MD5HashCashOutput{ seed: seed_output, hashcode: hash_code };
+fn format_dec_to_hex(seed: i32) -> String {
+    format!("{:016X}", seed)
 }
 
 fn format_digest_to_hex(digest: Digest) -> String {
     format!("{:032X}", digest)
 }
 
-fn format_hex_to_binary(hashcode: String) -> String {
+fn format_to_binary(hashcode: &String) -> String {
     hashcode.chars().map(to_binary).collect()
+}
+
+fn check_seed(binaryHash: String, complexity: u32) -> bool {
+    let mut index = 0;
+    for character in binaryHash.chars() {
+        if character == '1' && index < complexity {
+            print!("false\n");
+            return false;
+        } else if index >= complexity {
+            print!("good ");//envoie du resultat au server
+            return true;
+        }
+        index += 1;
+    }
+    return false;
+}
+
+
+fn to_binary(c: char) -> String {
+    let b = match c {
+        '0' => "0000",
+        '1' => "0001",
+        '2' => "0010",
+        '3' => "0011",
+        '4' => "0100",
+        '5' => "0101",
+        '6' => "0110",
+        '7' => "0111",
+        '8' => "1000",
+        '9' => "1001",
+        'A' => "1010",
+        'B' => "1011",
+        'C' => "1100",
+        'D' => "1101",
+        'E' => "1110",
+        'F' => "1111",
+        _ => "",
+    };
+    return String::from(b);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -128,11 +153,11 @@ pub enum Message {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PublicLeaderBoard(Vec<PublicPlayer>);
+pub struct PublicLeaderBoard(pub Vec<PublicPlayer>);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicPlayer {
-    name: String,
+    pub name: String,
     stream_id: String,
     score: i32,
     steps: u32,
