@@ -1,11 +1,9 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::{io, str};
+use std::{str};
 use serde::{Serialize, Deserialize};
-use hashcash::{Stamp, check};
 use md5::Digest;
 use serde_json::Error;
-use rand::Rng;
 
 
 pub fn receive(stream: &mut TcpStream, mut array: [u8; 4]) -> Result<Message, Error> {
@@ -27,7 +25,6 @@ pub fn receive(stream: &mut TcpStream, mut array: [u8; 4]) -> Result<Message, Er
     let first_last_off: &str = &a[1..a.len() - 1];
     let message: Result<Message, serde_json::Error> = serde_json::from_str(&first_last_off);
 
-    println!("{:?}", &message);
    return message
 }
 
@@ -48,23 +45,28 @@ pub fn md5hash_cash(complexity: u32, message: String) -> MD5HashCashOutput {
     let mut hash_code = "".to_string();
 
     while finish == false {
-        let hex_seed = format_dec_to_hex(seed as i32);
-        let concat_seed = concat_string(hex_seed.to_string(), &message);
-        let digest = md5::compute(concat_seed);
+
+        let seed_in_hex = convert_to_hex(seed as i32);
+        let seed_concat = concat_string(seed_in_hex.to_string(), &message);
+        let digest = md5::compute(seed_concat);
+
         hash_code = format_digest_to_hex(digest);
-        let mut binary_hash: String = format_to_binary(&hash_code);
+
+        let binary_hash: String = format_to_binary(&hash_code);
+
         finish = check_seed(binary_hash, complexity);
+
         seed += 1;
     }
 
      return MD5HashCashOutput{ seed, hashcode: hash_code.parse().unwrap() };
 }
 
-fn concat_string(seed: String, message: &String) -> String {
+fn concat_string(seed: String, message: &str) -> String {
     format!("{}{}\n", seed, message)
 }
 
-fn format_dec_to_hex(seed: i32) -> String {
+fn convert_to_hex(seed: i32) -> String {
     format!("{:016X}", seed)
 }
 
@@ -76,24 +78,26 @@ fn format_to_binary(hashcode: &String) -> String {
     hashcode.chars().map(to_binary).collect()
 }
 
-fn check_seed(binaryHash: String, complexity: u32) -> bool {
+fn check_seed(binary_hash: String, complexity: u32) -> bool {
     let mut index = 0;
-    for character in binaryHash.chars() {
+
+    for character in binary_hash.chars() {
+
         if character == '1' && index < complexity {
-            print!("false\n");
             return false;
         } else if index >= complexity {
-            print!("good ");//envoie du resultat au server
             return true;
         }
+
         index += 1;
     }
+
     return false;
 }
 
 
-fn to_binary(c: char) -> String {
-    let b = match c {
+fn to_binary(character: char) -> String {
+    let binary = match character {
         '0' => "0000",
         '1' => "0001",
         '2' => "0010",
@@ -112,7 +116,8 @@ fn to_binary(c: char) -> String {
         'F' => "1111",
         _ => "",
     };
-    return String::from(b);
+
+    return String::from(binary);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -204,7 +209,7 @@ pub struct MD5HashCashInput {
     pub message: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,PartialEq)]
 pub struct MD5HashCashOutput {
     pub seed: u64,
     pub hashcode: String,
@@ -229,4 +234,29 @@ pub enum ChallengeAnswer {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EndOfGame {
     leader_board: PublicLeaderBoard
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{md5hash_cash, MD5HashCashOutput};
+
+    #[test]
+    fn test_md5() {
+        let hello= String::from("Hello");
+        let md5input = md5hash_cash(9, hello);
+
+        let md5output = MD5HashCashOutput { seed: 822, hashcode: String::from("007337B087CEFCC4BCB9CAA5B73E70BF") };
+
+        assert_eq!(md5input,md5output);
+    }
+
+    #[test]
+    fn test_if_structure_Welcome_is_good() {
+        let hello= String::from("Hello");
+        let md5input = md5hash_cash(9, hello);
+
+        let md5output = MD5HashCashOutput { seed: 822, hashcode: String::from("007337B087CEFCC4BCB9CAA5B73E70BF") };
+
+        assert_eq!(md5input,md5output);
+    }
 }
