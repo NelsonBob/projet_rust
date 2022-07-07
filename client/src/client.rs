@@ -4,7 +4,7 @@ use std::net::TcpStream;
 use serde::{Serialize, Deserialize};
 use hashcash::{Stamp, check};
 use serde_json::Error;
-use shared::{Message, receive, send, Welcome, Subscribe, SubscribeResult, PublicLeaderBoard, Challenge, ChallengeResult, ChallengeAnswer, RoundSummary, EndOfGame, SubscribeError, MD5HashCashOutput, md5hash_cash};
+use shared::{Message, receive, send, Welcome, Subscribe, SubscribeResult, PublicLeaderBoard, Challenge, ChallengeResult, ChallengeAnswer, RoundSummary, EndOfGame, SubscribeError, MD5HashCashOutput, md5hash_cash, RecoverSecretResol};
 use shared::Message::Hello;
 
 fn main() {
@@ -22,7 +22,7 @@ fn main() {
                 match challenge {
                     Ok(v) => {
                         if let Message::Welcome(..) = v {
-                            let subscribe = Message::Subscribe(Subscribe { name: "eaa".parse().unwrap() });
+                            let subscribe = Message::Subscribe(Subscribe { name: "ealoa".parse().expect("failed to read String") });
                             send(&mut stream, subscribe);
                         }
                         if let Message::PublicLeaderBoard(..) = v {
@@ -35,7 +35,7 @@ fn main() {
                             println!("tt: {:?}", challenge);
                             loop {
                                 match challenge {
-                                    Challenge::MD5HashCash(hashcash) => {
+                                  Challenge::MD5HashCash(hashcash) => {
                                         let complexity = hashcash.complexity;
                                         let message = hashcash.message;
 
@@ -45,6 +45,15 @@ fn main() {
 
                                         let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(md5answer), next_target: "jk".parse().unwrap() });
                                         send(&mut stream, challenge_result);
+
+                                        break;
+                                    }
+                                    Challenge::RecoverSecret(reco) => {
+
+                                        let  challenge_output = ChallengeAnswer::RecoverSecret(RecoverSecretResol(reco));
+                                        let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::RecoverSecret(challenge_output), next_target: "jk".parse().unwrap() });
+                                        send(&mut stream, challenge_result);
+
 
                                         break;
                                     }
@@ -59,7 +68,7 @@ fn main() {
                 }
             }
         }
-        Err(err) => panic!("Cannot connect: {}", err)
+        Err(err) => panic!("Cannot connect: {err}" )
     }
 }
 

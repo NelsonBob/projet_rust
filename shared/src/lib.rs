@@ -9,7 +9,7 @@ use rand::Rng;
 
 
 pub fn receive(stream: &mut TcpStream, mut array: [u8; 4]) -> Result<Message, Error> {
-    stream.read( &mut array).unwrap();
+    stream.read( &mut array).expect("failed to read message");;
 
     let size_message: u32 = u32::from_be_bytes(array);
     let size_message = size_message as usize;
@@ -168,6 +168,7 @@ pub struct PublicPlayer {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Challenge {
     MD5HashCash(MD5HashCashInput),
+    RecoverSecret(RecoverSecretInput),
 }
 
 
@@ -223,10 +224,33 @@ pub struct ReportedChallengeResult {
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ChallengeAnswer {
-    MD5HashCash(MD5HashCashOutput)
+    MD5HashCash(MD5HashCashOutput),
+    RecoverSecret(RecoverSecretOutput),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EndOfGame {
     leader_board: PublicLeaderBoard
+}
+
+// fonction de recover secret
+pub fn RecoverSecretResol(input: RecoverSecretInput) -> RecoverSecretOutput {
+    return RecoverSecretOutput {
+        secret_sentence: String::from(""),
+    };
+}
+
+//struct imput
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RecoverSecretInput {
+    pub word_count: usize,
+    pub letters: String,
+    pub tuple_sizes: Vec<usize>,
+}
+
+// struct output
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RecoverSecretOutput {
+    pub secret_sentence: String,
 }
