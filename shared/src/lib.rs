@@ -143,6 +143,7 @@ pub struct PublicPlayer {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Challenge {
     MD5HashCash(MD5HashCashInput),
+    RecoverSecret(RecoverSecretOutput),
 }
 
 
@@ -204,4 +205,23 @@ pub enum ChallengeAnswer {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EndOfGame {
     leader_board: PublicLeaderBoard
+}
+// fonction de recover secret
+pub fn RecoverSecret(input: RecoverSecretInput) -> RecoverSecretOutput {
+    return RecoverSecretOutput {
+        secret_sentence: String::from(""),
+    };
+}
+
+//struct imput
+pub struct RecoverSecretInput {
+    pub word_count: usize,
+    pub letters: String,
+    pub tuple_sizes: Vec<usize>,
+}
+
+// struct output
+
+pub struct RecoverSecretOutput {
+    pub secret_sentence: String,
 }
