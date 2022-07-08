@@ -4,7 +4,7 @@ use std::net::TcpStream;
 use serde::{Serialize, Deserialize};
 use hashcash::{Stamp, check};
 use serde_json::Error;
-use shared::{Message, receive, send, Welcome, Subscribe, SubscribeResult, PublicLeaderBoard, Challenge, ChallengeResult, ChallengeAnswer, RoundSummary, EndOfGame, SubscribeError, MD5HashCashOutput, md5hash_cash};
+use shared::{Message, receive, send, Welcome, Subscribe, SubscribeResult, PublicLeaderBoard, Challenge, ChallengeResult, ChallengeAnswer, RoundSummary, EndOfGame, SubscribeError, MD5HashCashOutput, md5hash_cash, recover_secret};
 use shared::Message::Hello;
 
 fn main() {
@@ -22,7 +22,7 @@ fn main() {
                 match challenge {
                     Ok(v) => {
                         if let Message::Welcome(..) = v {
-                            let subscribe = Message::Subscribe(Subscribe { name: "eaa".parse().unwrap() });
+                            let subscribe = Message::Subscribe(Subscribe { name: "lucas2".parse().unwrap() });
                             send(&mut stream, subscribe);
                         }
                         if let Message::PublicLeaderBoard(..) = v {
@@ -32,22 +32,31 @@ fn main() {
                             break;
                         }
                         if let Message::Challenge(challenge) = v {
-                            println!("tt: {:?}", challenge);
+                            println!("challenge a effectué : {:?}", challenge);
                             loop {
-                                match challenge {
+                                match challenge.clone() {
+                                    Challenge::RecoverSecret(recover) => {
+                                        let recover_secret_answer = recover_secret(recover);
+
+                                        let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::RecoverSecret(recover_secret_answer), next_target: "lucas".parse().unwrap() });
+                                        send(&mut stream, challenge_result);
+                                    }
+
                                     Challenge::MD5HashCash(hashcash) => {
                                         let complexity = hashcash.complexity;
                                         let message = hashcash.message;
 
                                         let md5answer = md5hash_cash(complexity, message);
 
-                                        println!("ll {:?}", md5answer);
+                                        println!("reponse du challenge {:?}", md5answer);
 
-                                        let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(md5answer), next_target: "jk".parse().unwrap() });
+                                        let challenge_result = Message::ChallengeResult(ChallengeResult { answer: ChallengeAnswer::MD5HashCash(md5answer), next_target: "lucas".parse().unwrap() });
                                         send(&mut stream, challenge_result);
 
                                         break;
                                     }
+
+                                    _ => {}
                                 }
                             }
                         }

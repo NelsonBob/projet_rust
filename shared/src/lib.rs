@@ -21,6 +21,7 @@ pub fn receive(stream: &mut TcpStream, mut array: [u8; 4]) -> Result<Message, Er
     let welcome_serialized = serde_json::to_string(&message_received).unwrap();
     let a = welcome_serialized.replace("\\", "");
 
+    println!("{}", message_received);
 
     let first_last_off: &str = &a[1..a.len() - 1];
     let message: Result<Message, serde_json::Error> = serde_json::from_str(&first_last_off);
@@ -60,6 +61,12 @@ pub fn md5hash_cash(complexity: u32, message: String) -> MD5HashCashOutput {
     }
 
      return MD5HashCashOutput{ seed, hashcode: hash_code.parse().unwrap() };
+}
+
+pub fn recover_secret(input: RecoverSecretInput) -> RecoverSecretOutput {
+    return RecoverSecretOutput {
+        secret_sentence: String::from(""),
+    };
 }
 
 fn concat_string(seed: String, message: &str) -> String {
@@ -120,7 +127,23 @@ fn to_binary(character: char) -> String {
     return String::from(binary);
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Message {
+    Hello,
+    Welcome(Welcome),
+    Subscribe(Subscribe),
+    SubscribeResult(SubscribeResult),
+    PublicLeaderBoard(PublicLeaderBoard),
+    Challenge(Challenge),
+    MD5HashCashInput(MD5HashCashInput),
+    RecoverSecretInput(RecoverSecretInput),
+    ChallengeResult(ChallengeResult),
+    ChallengeAnswer(ChallengeAnswer),
+    RoundSummary(RoundSummary),
+    EndOfGame(EndOfGame)
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Welcome{
     version: i32
 }
@@ -143,21 +166,6 @@ pub enum SubscribeResult {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum Message {
-    Hello,
-    Welcome(Welcome),
-    Subscribe(Subscribe),
-    SubscribeResult(SubscribeResult),
-    PublicLeaderBoard(PublicLeaderBoard),
-    Challenge(Challenge),
-    MD5HashCashInput(MD5HashCashInput),
-    ChallengeResult(ChallengeResult),
-    ChallengeAnswer(ChallengeAnswer),
-    RoundSummary(RoundSummary),
-    EndOfGame(EndOfGame)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct PublicLeaderBoard(pub Vec<PublicPlayer>);
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -170,12 +178,35 @@ pub struct PublicPlayer {
     total_used_time: f64
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Challenge {
     MD5HashCash(MD5HashCashInput),
+    RecoverSecret(RecoverSecretInput)
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MD5HashCashInput {
+    pub complexity: u32,
+    pub message: String,
+}
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct MD5HashCashOutput {
+    pub seed: u64,
+    pub hashcode: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RecoverSecretInput {
+    pub word_count: usize,
+    pub letters: String,
+    pub tuple_sizes: Vec<usize>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RecoverSecretOutput {
+    pub secret_sentence: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeResult {
@@ -204,18 +235,6 @@ pub struct Ok {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MD5HashCashInput {
-    pub complexity: u32,
-    pub message: String,
-}
-
-#[derive(Debug, Serialize, Deserialize,PartialEq)]
-pub struct MD5HashCashOutput {
-    pub seed: u64,
-    pub hashcode: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct RoundSummary {
     challenge: String,
     chain: Vec<ReportedChallengeResult>
@@ -228,7 +247,8 @@ pub struct ReportedChallengeResult {
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ChallengeAnswer {
-    MD5HashCash(MD5HashCashOutput)
+    MD5HashCash(MD5HashCashOutput),
+    RecoverSecret(RecoverSecretOutput)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -238,7 +258,8 @@ pub struct EndOfGame {
 
 #[cfg(test)]
 mod tests {
-    use crate::{md5hash_cash, MD5HashCashOutput};
+    use crate::{md5hash_cash, MD5HashCashOutput, Message};
+    use crate::Welcome;
 
     #[test]
     fn test_md5() {
@@ -251,12 +272,36 @@ mod tests {
     }
 
     #[test]
-    fn test_if_structure_Welcome_is_good() {
-        let hello= String::from("Hello");
-        let md5input = md5hash_cash(9, hello);
+    fn test_if_structure_welcome_is_good() {
+        let welcome = Welcome{version:1};
 
-        let md5output = MD5HashCashOutput { seed: 822, hashcode: String::from("007337B087CEFCC4BCB9CAA5B73E70BF") };
+        let welcome_message = Message::Welcome(welcome);
 
-        assert_eq!(md5input,md5output);
+       let check = equals_struct(welcome_message);
+
+        let mes = "Welcome";
+
+        assert_eq!(check, mes);
+    }
+
+    fn equals_struct(structure: Message) -> &'static str {
+        let mut message="";
+
+        match structure {
+            Message::Hello => message = "Hello",
+            Message::Welcome(_) => message = "Welcome",
+            Message::Subscribe(_) => message = "Subscribe",
+            Message::SubscribeResult(_) => message = "SubscribeResult",
+            Message::PublicLeaderBoard(_) => message = "PublicLeaderBoard",
+            Message::Challenge(_) => message = "Challenge",
+            Message::MD5HashCashInput(_) => message = "MD5HashCashInput",
+            Message::ChallengeResult(_) => message = "ChallengeResult",
+            Message::ChallengeAnswer(_) => message = "ChallengeAnswer",
+            Message::RoundSummary(_) => message = "RoundSummary",
+            Message::EndOfGame(_) => message = "EndOfGame",
+            _ => {}
+        }
+
+        return message
     }
 }
